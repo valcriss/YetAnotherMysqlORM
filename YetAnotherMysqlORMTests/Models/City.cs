@@ -17,5 +17,7 @@ namespace YetAnotherMysqlORMTests.Models
         public string Name { get; set; }
         [Field("link")]
         public string Link { get; set; }
+
+
     }
 }

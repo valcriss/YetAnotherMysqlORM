@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace YetAnotherMysqlORM.Models
@@ -11,6 +12,23 @@ namespace YetAnotherMysqlORM.Models
             string fields = string.Join(", ", fieldValues.Keys);
             string values = string.Join(", ", UpdateFields(fieldValues).Values);
             return $"INSERT INTO {table} ({fields}) VALUES ({values})";
+        }
+
+        public static string DeleteQuery(string table, string primaryField, int primaryValue)
+        {
+            return $"DELETE FROM {table} WHERE {primaryField}={primaryValue}";
+        }
+
+        public static string LoadQuery(string table, Dictionary<string, string> fieldValues, string primaryField, int primaryValue)
+        {
+            string fields = string.Join(", ", fieldValues.Keys);
+            return $"SELECT {fields} FROM {table} WHERE {primaryField}={primaryValue}";
+        }
+
+        public static string LoadSelect(string table, Dictionary<string, string> fieldValues)
+        {
+            string fields = string.Join(", ", fieldValues.Keys);
+            return $"SELECT {fields} FROM {table}";
         }
 
         private static Dictionary<string, string> UpdateFields(Dictionary<string, string> fieldValues)
@@ -29,5 +47,7 @@ namespace YetAnotherMysqlORM.Models
             }
             return tmp;
         }
+
+
     }
 }
