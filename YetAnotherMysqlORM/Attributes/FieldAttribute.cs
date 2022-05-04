@@ -8,10 +8,12 @@ namespace YetAnotherMysqlORM.Attributes
     {
         public string Name { get; set; }
         public bool Primary { get; set; }
-        public FieldAttribute(string name, bool primary = false)
+        public bool IgnoreOnCreate { get; set; }
+        public FieldAttribute(string name, bool primary = false,bool ignoreOnCreate = false)
         {
             Name = name;
             Primary = primary;
+            IgnoreOnCreate = ignoreOnCreate;
         }
     }
 }

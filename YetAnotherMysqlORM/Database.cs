@@ -17,7 +17,7 @@ namespace YetAnotherMysqlORM
 
         public static async Task<bool> Update(string query)
         {
-            using(MySqlConnection connection = new MySqlConnection(ConnectionString))
+            using (MySqlConnection connection = new MySqlConnection(ConnectionString))
             {
                 connection.Open();
                 using (MySqlCommand command = new MySqlCommand(query, connection))
@@ -51,13 +51,13 @@ namespace YetAnotherMysqlORM
                 connection.Open();
                 using (MySqlCommand command = new MySqlCommand(query, connection))
                 {
-                    int result = await command.ExecuteNonQueryAsync();                    
+                    int result = await command.ExecuteNonQueryAsync();
                 }
                 using (MySqlCommand command = new MySqlCommand("SELECT LAST_INSERT_ID();", connection))
                 {
-                    using(MySqlDataReader reader = command.ExecuteReader())
+                    using (MySqlDataReader reader = command.ExecuteReader())
                     {
-                        if(reader.Read())
+                        if (reader.Read())
                         {
                             id = reader.GetInt32(0);
                         }
@@ -80,7 +80,7 @@ namespace YetAnotherMysqlORM
                         if (reader.Read())
                         {
                             record = new Dictionary<string, string>();
-                            for(int i= 0; i < reader.FieldCount; i++)
+                            for (int i = 0; i < reader.FieldCount; i++)
                             {
                                 string name = reader.GetName(i);
                                 string value = reader.GetValue(i)?.ToString();

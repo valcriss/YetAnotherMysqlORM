@@ -9,15 +9,18 @@ using YetAnotherMysqlORM.Models;
 namespace YetAnotherMysqlORMTests.Models
 {
     [Table("villes")]
-    internal class City : Table<City>
+    public class City : Table<City>
     {
         [Field("id", true)]
         public int Id { get; set; }
         [Field("name")]
-        public string Name { get; set; }
+        public string? Name { get; set; }
         [Field("link")]
-        public string Link { get; set; }
+        public string? Link { get; set; }
 
-
+        public async Task<List<Street>> GetStreets()
+        {
+            return await GetLinkedRecords<Street>();
+        }
     }
 }

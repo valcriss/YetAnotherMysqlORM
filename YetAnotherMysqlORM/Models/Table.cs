@@ -10,7 +10,7 @@ namespace YetAnotherMysqlORM.Models
 {
     public class Table<T> where T : Table<T>, new()
     {
-        public T Loaded { get; set; }
+        internal bool Loaded { get; set; }
         private string TableName { get; set; }
 
         public Table()
@@ -20,12 +20,14 @@ namespace YetAnotherMysqlORM.Models
 
         public async Task<bool> Save()
         {
-            if (Loaded == null)
+            if (!Loaded)
             {
                 return await Insert();
             }
-
-            return false;
+            else
+            {
+                return await Update();
+            }
         }
 
         public async Task<bool> Delete()
@@ -43,12 +45,27 @@ namespace YetAnotherMysqlORM.Models
 
         private async Task<bool> Insert()
         {
-            Dictionary<string, string> fieldValues = GetFieldValues(this, false);
+            Dictionary<string, string> fieldValues = GetFieldValues<T>(this, false);
             string query = QueryBuilder.InsertQuery(TableName, fieldValues);
             int? id = await Database.Insert(query);
             if (id != null)
             {
                 return UpdatePrimaryKey(id.Value);
+            }
+            return false;
+        }
+
+        private async Task<bool> Update()
+        {
+            PropertyInfo primary = typeof(T).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null && c.GetCustomAttribute<FieldAttribute>().Primary).FirstOrDefault();
+            if (primary != null)
+            {
+                FieldAttribute primaryFieldAttribute = primary.GetCustomAttribute<FieldAttribute>();
+                int primaryValue = (int)primary.GetValue(this);
+                Dictionary<string, string> fieldValues = GetFieldValues<T>(this, true);
+                fieldValues.Remove(primaryFieldAttribute.Name);
+                string query = QueryBuilder.UpdateQuery(TableName, fieldValues, primaryFieldAttribute.Name, primaryValue);
+                return await Database.Update(query);
             }
             return false;
         }
@@ -59,36 +76,80 @@ namespace YetAnotherMysqlORM.Models
             string tableName = typeof(T).GetCustomAttribute<TableAttribute>() != null ? typeof(T).GetCustomAttribute<TableAttribute>().Name : null;
             if (property != null && tableName != null)
             {
-                Dictionary<string, string> fieldValues = GetFieldValues(null, true);
+                Dictionary<string, string> fieldValues = GetFieldValues<T>(null, true);
                 FieldAttribute fieldAttribute = property.GetCustomAttribute<FieldAttribute>();
                 string query = QueryBuilder.LoadQuery(tableName, fieldValues, fieldAttribute.Name, id);
                 Dictionary<string, string> record = await Database.QueryOne(query);
-                return LoadFromDictionnary(record);
+                return LoadFromDictionnary<T>(record);
             }
             return null;
         }
 
-        public async static Task<List<T>> Select()
+        public async static Task<List<T>> Select(string filter = null)
         {
             List<T> tmp = new List<T>();
-            Dictionary<string, string> fieldValues = GetFieldValues(null, true);
+            Dictionary<string, string> fieldValues = GetFieldValues<T>(null, true);
             string tableName = typeof(T).GetCustomAttribute<TableAttribute>() != null ? typeof(T).GetCustomAttribute<TableAttribute>().Name : null;
-            string query = QueryBuilder.LoadSelect(tableName, fieldValues);
+            string query = QueryBuilder.LoadSelect(tableName, fieldValues, filter);
             List<Dictionary<string, string>> records = await Database.QueryMultiple(query);
-            foreach(Dictionary<string, string> record in records)
+            foreach (Dictionary<string, string> record in records)
             {
-                tmp.Add(LoadFromDictionnary(record));
+                tmp.Add(LoadFromDictionnary<T>(record));
             }
             return tmp;
         }
 
-        private static T LoadFromDictionnary(Dictionary<string, string> record)
+        protected async Task<List<U>> GetLinkedRecords<U>(string filter = null) where U : Table<U>, new()
         {
-            T obj = new T();
+            string remoteTable = typeof(U).GetCustomAttribute<TableAttribute>() != null ? typeof(U).GetCustomAttribute<TableAttribute>().Name : null;
+            PropertyInfo foreignProperty = typeof(U).GetProperties().Where(c => c.GetCustomAttribute<ForeignAttribute>() != null && c.GetCustomAttribute<ForeignAttribute>().ForeignType == typeof(T)).FirstOrDefault();
+            PropertyInfo primary = typeof(T).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null && c.GetCustomAttribute<FieldAttribute>().Primary).FirstOrDefault();
+            if (foreignProperty != null && primary != null)
+            {
+                int value = (int)primary.GetValue(this);
+
+                Dictionary<string, string> fieldValues = GetFieldValues<U>(null, true);
+                string remoteField = foreignProperty.GetCustomAttribute<FieldAttribute>().Name;
+                string query = QueryBuilder.LinkedRecords(remoteTable, fieldValues, remoteField, value, filter);
+                List<Dictionary<string, string>> records = await Database.QueryMultiple(query);
+                List<U> tmp = new List<U>();
+                foreach (Dictionary<string, string> record in records)
+                {
+                    tmp.Add(LoadFromDictionnary<U>(record));
+                }
+                return tmp;
+
+            }
+            return null;
+        }
+
+        protected async Task<U> GetLinkedRecord<U>() where U : Table<U>, new()
+        {
+            string remoteTable = typeof(U).GetCustomAttribute<TableAttribute>() != null ? typeof(U).GetCustomAttribute<TableAttribute>().Name : null;
+            PropertyInfo property = typeof(T).GetProperties().Where(c => c.GetCustomAttribute<ForeignAttribute>() != null && c.GetCustomAttribute<ForeignAttribute>().ForeignType == typeof(U)).FirstOrDefault();
+            if (property != null)
+            {
+                int value = (int)property.GetValue(this);
+                PropertyInfo foreignPrimary = typeof(U).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null && c.GetCustomAttribute<FieldAttribute>().Primary).FirstOrDefault();
+                if (foreignPrimary != null)
+                {
+                    Dictionary<string, string> fieldValues = GetFieldValues<U>(null, true);
+                    string remotePrimary = foreignPrimary.GetCustomAttribute<FieldAttribute>().Name;
+                    string query = QueryBuilder.LinkedRecord(remoteTable, fieldValues, remotePrimary, value);
+                    Dictionary<string, string> record = await Database.QueryOne(query);
+                    return LoadFromDictionnary<U>(record);
+                }
+            }
+            return null;
+        }
+
+        private static Z LoadFromDictionnary<Z>(Dictionary<string, string> record) where Z : Table<Z>, new()
+        {
+            Z obj = new Z();
 
             foreach (KeyValuePair<string, string> column in record)
             {
-                PropertyInfo property = typeof(T).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null && c.GetCustomAttribute<FieldAttribute>().Name == column.Key).FirstOrDefault();
+                PropertyInfo property = typeof(Z).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null && c.GetCustomAttribute<FieldAttribute>().Name == column.Key).FirstOrDefault();
                 if (property != null)
                 {
                     if (property.PropertyType == typeof(int))
@@ -99,10 +160,19 @@ namespace YetAnotherMysqlORM.Models
                     {
                         property.SetValue(obj, column.Value);
                     }
+                    else if (property.PropertyType == typeof(DateTime))
+                    {
+                        property.SetValue(obj, ParseDate(column.Value));
+                    }
                 }
             }
-            obj.Loaded = obj;
+            obj.Loaded = true;
             return obj;
+        }
+
+        public static DateTime ParseDate(string value)
+        {
+            return DateTime.Parse(value);
         }
 
         private bool UpdatePrimaryKey(int value)
@@ -111,24 +181,33 @@ namespace YetAnotherMysqlORM.Models
             if (property != null)
             {
                 property.SetValue(this, value);
+                this.Loaded = true;
                 return true;
             }
             return false;
         }
 
-        private static Dictionary<string, string> GetFieldValues(object obj, bool includePrimary)
+        private static Dictionary<string, string> GetFieldValues<Z>(object obj, bool includeAllFields)
         {
             Dictionary<string, string> values = new Dictionary<string, string>();
 
-            foreach (var property in typeof(T).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null))
+            foreach (var property in typeof(Z).GetProperties().Where(c => c.GetCustomAttribute<FieldAttribute>() != null))
             {
                 FieldAttribute fieldAttribute = property.GetCustomAttribute<FieldAttribute>();
-                if (!includePrimary && fieldAttribute.Primary)
+                if (!includeAllFields && (fieldAttribute.Primary || fieldAttribute.IgnoreOnCreate))
                 {
                     continue;
                 }
-                System.Diagnostics.Debug.WriteLine(property.Name);
-                string value = obj != null && property.GetValue(obj) != null ? property.GetValue(obj).ToString() : null;
+                
+                string value = null;
+                if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
+                {
+                    value = obj != null && property.GetValue(obj) != null ? ((DateTime)property.GetValue(obj)).ToString("yyyy-MM-dd H:mm:ss") : null;
+                }
+                else
+                {
+                    value = obj != null && property.GetValue(obj) != null ? property.GetValue(obj).ToString() : null;
+                }
                 values.Add(fieldAttribute.Name, value);
             }
 
