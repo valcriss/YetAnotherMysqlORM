@@ -58,7 +58,7 @@ namespace YetAnotherMysqlORMTests
         public void DateParseTest()
         {
             string date = "2022-12-25";
-            DateTime dateTime = Table<City>.ParseDate(date);
+            DateTime? dateTime = Table<City>.ParseDate(date);
             Assert.IsNotNull(dateTime);
         }
 

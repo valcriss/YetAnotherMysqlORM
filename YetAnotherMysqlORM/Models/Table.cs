@@ -170,9 +170,37 @@ namespace YetAnotherMysqlORM.Models
             return obj;
         }
 
-        public static DateTime ParseDate(string value)
+        public static DateTime? ParseDate(string value)
         {
-            return DateTime.Parse(value);
+            if (string.IsNullOrEmpty(value)) return null;
+            if (value.Length == 10)
+            {
+                if (value.IndexOf('-') >= 0)
+                {
+                    string[] tab = value.Split('-');
+                    return new DateTime(int.Parse(tab[0]), int.Parse(tab[1]), int.Parse(tab[2]));
+                }
+                else
+                {
+                    string[] tab = value.Split('/');
+                    return new DateTime(int.Parse(tab[2]), int.Parse(tab[1]), int.Parse(tab[0]));
+                }
+                
+            }
+            else
+            {
+                string[] tab1 = value.Split(' ');
+                if (tab1[0].IndexOf('-') >= 0)
+                {
+                    string[] tab = tab1[0].Split('-');
+                    return new DateTime(int.Parse(tab[0]), int.Parse(tab[1]), int.Parse(tab[2]));
+                }
+                else
+                {
+                    string[] tab = tab1[0].Split('/');
+                    return new DateTime(int.Parse(tab[2]), int.Parse(tab[1]), int.Parse(tab[0]));
+                }                
+            }
         }
 
         private bool UpdatePrimaryKey(int value)
@@ -198,11 +226,11 @@ namespace YetAnotherMysqlORM.Models
                 {
                     continue;
                 }
-                
+
                 string value = null;
                 if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?))
                 {
-                    value = obj != null && property.GetValue(obj) != null ? ((DateTime)property.GetValue(obj)).ToString("yyyy-MM-dd H:mm:ss") : null;
+                    value = obj != null && property.GetValue(obj) != null ? ((DateTime)property.GetValue(obj)).ToString("yyyy-MM-dd") : null;
                 }
                 else
                 {
