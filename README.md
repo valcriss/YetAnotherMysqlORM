@@ -12,20 +12,20 @@ The library targets multiple frameworks :
 - .NET 4.8
 
 ---
-## Installation
+### Installation
 Simply download and restore nuget packages https://www.nuget.org/packages/YetAnotherMysqlORM/ or install it from package manager
 ```
 PM> Install-Package YetAnotherMysqlORM -Version x.x.x
 ```
 
 ---
-## Initialize the Database
+### Initialize the Database
 ```C#
 Database.Initialize("localhost", "database", "user", "password");
 ```
 
 ---
-## Declare a Table Object
+### Declare a Table Object
 ```C#
 [Table("city")]
 public class City : Table<City>
@@ -65,30 +65,30 @@ public class Street : Table<Street>
 }
 ```
 ---
-## List records
+### List records
 ```C#
 List<City> cities = await City.Select();
 ```
-## List records filtered
+### List records filtered
 ```C#
 List<City> cities = await City.Select("name LIKE '%Paris%'");
 ```
-## Load a record by primary value
+### Load a record by primary value
 ```C#
 City city = await City.Load(id);
 ```
-## Create a record
+### Create a record
 ```C#
 City city = new City() { Name = Faker.LocationFaker.City(), Link = Faker.InternetFaker.Url() };
 bool addResult = await city.Save();
 ```
-## Update a record
+### Update a record
 ```C#
 City city = await City.Load(id);
 city.Name = "Paris";
 bool updateResult = await city.Save();
 ```
-## Delete a record
+### Delete a record
 ```C#
 bool deleteResult = await city.Delete();
 ```
