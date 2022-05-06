@@ -164,6 +164,10 @@ namespace YetAnotherMysqlORM.Models
                     {
                         property.SetValue(obj, ParseDate(column.Value));
                     }
+                    else if (property.PropertyType == typeof(DateTime?))
+                    {
+                        property.SetValue(obj, ParseDate(column.Value));
+                    }
                 }
             }
             obj.Loaded = true;
