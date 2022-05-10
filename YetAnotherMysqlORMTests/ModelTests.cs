@@ -125,5 +125,37 @@ namespace YetAnotherMysqlORMTests
             bool deleteCityResult = await city.Delete();
             Assert.IsTrue(deleteCityResult);
         }
+
+        [TestMethod]
+        public async Task VariableInitializationTest()
+        {
+            Database.Initialize("localhost", "testdb", "root", "password");
+
+            City city = new City() { Name = Faker.LocationFaker.City(), Link = Faker.InternetFaker.Url() };
+            bool addResult = await city.Save();
+            Assert.IsTrue(addResult);
+
+            Street street = new Street() { CityId = city.Id, StreetName = Faker.LocationFaker.StreetName(), Creation = DateTime.Now };
+            bool addStreetResult = await street.Save();
+            Assert.IsNull(street.Update);
+            Assert.IsTrue(addStreetResult);
+
+            street = await Street.Load(street.Id);
+
+            Assert.IsNull(street.Update);
+
+            List<Street> streets = await city.GetStreets();
+
+            foreach(Street item in streets)
+            {
+                Assert.IsNull(item.Update);
+            }
+
+            bool deleteStreetResult = await street.Delete();
+            Assert.IsTrue(deleteStreetResult);
+
+            bool deleteCityResult = await city.Delete();
+            Assert.IsTrue(deleteCityResult);
+        }
     }
 }
