@@ -119,6 +119,10 @@ namespace YetAnotherMysqlORMTests
             bool updateStreetResult = await street.Save();
             Assert.IsTrue(updateStreetResult);
 
+            Street updated = await Street.Load(street.Id);
+
+            Assert.IsNotNull(updated.Update);
+
             bool deleteStreetResult = await street.Delete();
             Assert.IsTrue(deleteStreetResult);
 
